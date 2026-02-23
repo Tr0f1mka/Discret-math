@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "utilities.h"
 
@@ -72,7 +73,7 @@ int InputBigInt(BigInt* big_int) {
     }
     
     printf("Input the digits from MOST significant to LEAST significant (e.g., for 12345 input: 1 2 3 4 5):\n");
-    for (int i =  big_int->koefs[0]; i > 0; i--) {
+    for (unsigned int i =  big_int->koefs[0]; i > 0; i--) {
         scanf("%u", &big_int->koefs[i]);
     }
     
@@ -96,8 +97,8 @@ void PrintBigInt(BigInt* big_int) {
     if (big_int == NULL || big_int->koefs == NULL) {
         return;
     }
-    printf("%c ", (GetSign(big_int)) ? '-' : ' ');
-    for (int i = big_int->koefs[0]; i > 0; i--) {
+    printf("%s", (GetSign(big_int)) ? "-" : "");
+    for (unsigned int i = big_int->koefs[0]; i > 0; i--) {
         printf("%u ", big_int->koefs[i]);
     }
     printf("\n");
@@ -135,7 +136,7 @@ BigInt* SumTwo(BigInt* bigint1, BigInt* bigint2) {
             return NULL;
         }
 
-        for (int i = 1; i <= min_length; i++) {
+        for (unsigned int i = 1; i <= min_length; i++) {
             buffer += ((unsigned long long)bigint1->koefs[i] + (unsigned long long)bigint2->koefs[i]);
             result->koefs[i] = buffer & (BASE-1);
             buffer >>= 32;
@@ -145,7 +146,7 @@ BigInt* SumTwo(BigInt* bigint1, BigInt* bigint2) {
 
             if (min_length == bigint1->koefs[0]) {
 
-                for (int i = min_length+1; i <= length; i++) {
+                for (unsigned int i = min_length+1; i <= length; i++) {
                     buffer += (unsigned long long)bigint2->koefs[i];
                     result->koefs[i] = buffer & (BASE-1);
                     buffer >>= 32;
@@ -154,7 +155,7 @@ BigInt* SumTwo(BigInt* bigint1, BigInt* bigint2) {
             }
             else {
 
-                for (int i = min_length+1; i <= length; i++) {
+                for (unsigned int i = min_length+1; i <= length; i++) {
                     buffer += (unsigned long long)bigint1->koefs[i];
                     result->koefs[i] = buffer & (BASE-1);
                     buffer >>= 32;
@@ -255,7 +256,7 @@ BigInt* DiffTwo(BigInt* bigint1, BigInt* bigint2) {
         return NULL;
     }
 
-    for (int i = 1; i <= min_length; i++) {
+    for (unsigned int i = 1; i <= min_length; i++) {
 
         result->koefs[i] = big->koefs[i] - overhead - small->koefs[i];
         if (big->koefs[i] < small->koefs[i] + overhead) {
@@ -267,7 +268,7 @@ BigInt* DiffTwo(BigInt* bigint1, BigInt* bigint2) {
 
     }
 
-    for (int i = min_length+1; i <= length; i++) {
+    for (unsigned int i = min_length+1; i <= length; i++) {
 
         result->koefs[i] = big->koefs[i] - overhead;
         if (big->koefs[i] < overhead) {
@@ -283,11 +284,70 @@ BigInt* DiffTwo(BigInt* bigint1, BigInt* bigint2) {
         return NULL;
     }
 
-    while (result->koefs[length] == 0) {
+    while (length > 1 && result->koefs[length] == 0) {
         length--;
     }
+    result->koefs[0] = length;
     result->high_digit = (int)result->koefs[length];
     SetSign(result, sign1);
 
+    return result;
+}
+
+
+BigInt* MultTwo(BigInt* bigint1, BigInt* bigint2) {
+    if (bigint1 == NULL || bigint1->koefs == NULL || bigint2 == NULL || bigint2->koefs == NULL) {
+        return NULL;
+    }
+
+    BigInt* result = Init();
+    if (result == NULL) {
+        return NULL;
+    }
+
+    if (bigint1->high_digit == 0 || bigint2->high_digit == 0) {
+        return result;
+    }
+
+    unsigned int len1 = bigint1->koefs[0],
+                 len2 = bigint2->koefs[0],
+                 res_len = len1 + len2;
+
+    result->koefs = (unsigned int*)realloc(result->koefs, sizeof(unsigned int)*(len1 + len2));
+    if (result->koefs == NULL) {
+        DeInit(result);
+        return NULL;
+    }
+    result->koefs = (unsigned int*)memset(result->koefs, 0, sizeof(unsigned int)*(len1 + len2));
+
+    for (unsigned int i = 1; i <= len1; i++) {
+        unsigned long long buffer = 0;
+        for  (unsigned int j = 1; j <= len2; j++) {
+            buffer = (unsigned long long)bigint1->koefs[i]
+                     * (unsigned long long)bigint2->koefs[j]
+                     + (unsigned long long)result->koefs[i+j-1]
+                     + buffer;
+            result->koefs[i+j-1] = (unsigned int)(buffer & (BASE - 1));
+            buffer >>= 32;
+        }
+        if (buffer) {
+            unsigned int k = i+len2;
+            while (buffer && k <= res_len) {
+                buffer = (unsigned long long)result->koefs[k] + buffer;
+                result->koefs[k] = (unsigned int)(buffer & (BASE-1));
+                buffer >>= 32;
+                k++;
+            }
+        }
+    }
+
+    while (res_len > 1 && result->koefs[res_len] == 0) {
+        res_len--;
+    }
+    result->koefs[0] = res_len;
+
+    result->high_digit = result->koefs[res_len];
+    int sign1 = GetSign(bigint1), sign2 = GetSign(bigint2);
+    SetSign(result, sign1 != sign2);
     return result;
 }

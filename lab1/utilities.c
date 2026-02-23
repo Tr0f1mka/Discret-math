@@ -118,3 +118,13 @@ int AbsCompare(BigInt* num1, BigInt* num2) {
 
     return 0;
 }
+
+
+int hiword(int value) {
+    return (value >> (sizeof(value) << 2)) & ((1 << (sizeof(value) << 2)) - 1);
+}
+
+
+int loword(int value) {
+    return value & ((1 << (sizeof(value) << 2)) - 1);
+}

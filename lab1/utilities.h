@@ -23,6 +23,8 @@ unsigned int MinUnInt(unsigned int num1, unsigned int num2);
 void SetSign(BigInt* big_int, int sign);
 int GetSign(BigInt* big_int);
 int AbsCompare(BigInt* num1, BigInt* num2);
+int hiword(int value);
+int loword(int value);
 
 
 #endif
