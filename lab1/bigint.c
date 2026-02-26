@@ -178,11 +178,10 @@ int SumTwoWithoutNew(BigInt* bigint1, BigInt* bigint2) {
         len1 = (bigint1->koefs == NULL) ? 0 : bigint1->koefs[0],
         len2 = (bigint2->koefs == NULL) ? 0 : bigint2->koefs[0];
 
-    //PrintBigInt(bigint1);
-
     if (bigint1->koefs == NULL && bigint2->koefs == NULL) {                  //2 малых числа
-        if (high1 + high2 < BASE >> 1) {
-            bigint1->high_digit = high1 + high2;
+        unsigned long long int buffer = (unsigned long long int)high1 + (unsigned long long int)high2;
+        if (buffer < (BASE >> 1)) {
+            bigint1->high_digit = (unsigned int)buffer;
             SetSign(bigint1, sign1);
             return 0;
         }
@@ -191,8 +190,8 @@ int SumTwoWithoutNew(BigInt* bigint1, BigInt* bigint2) {
             if (bigint1->koefs == NULL) {
                 return 1;
             }
-            bigint1->koefs[1] = (high1 + high2) & (BASE - 1);
-            bigint1->high_digit = ((high1 + high2) >> (sizeof(int) * 8));
+            bigint1->koefs[1] = (unsigned int)((buffer) & (BASE - 1));
+            bigint1->high_digit = (int)((buffer) >> (sizeof(int) * 8));
             bigint1->koefs[0] = 1;
             SetSign(bigint1, sign1);
             return 0;
@@ -202,28 +201,30 @@ int SumTwoWithoutNew(BigInt* bigint1, BigInt* bigint2) {
     if (bigint1->koefs != NULL && bigint2->koefs == NULL) {                  //большое и малое число
 
         unsigned int i = 1;
-        unsigned int buffer = high2;
+        unsigned long long int buffer = (unsigned long long int)high2;
         while (buffer != 0 && i <= len1) {
             if (bigint1->koefs[i] + buffer < BASE) {
                 bigint1->koefs[i] += buffer;
                 break;
             }
-            bigint1->koefs[i] = (bigint1->koefs[i] + buffer) & (BASE - 1);
-            buffer = (bigint1->koefs[i] + buffer) >> (sizeof(int) * 8);
+            buffer += (unsigned long long int)bigint1->koefs[i];
+            bigint1->koefs[i] = (unsigned int)((buffer) & (BASE - 1));
+            buffer = (buffer) >> (sizeof(int) * 8);
             i++;
         }
 
         if (buffer != 0) {
-            if (high1 + buffer < (BASE >> 1)) {
-                bigint1->high_digit = (int)(high1 + buffer);
+            buffer += (unsigned long long int)high1;
+            if ((buffer) < (BASE >> 1)) {
+                bigint1->high_digit = (int)(buffer);
             }
             else {
                 bigint1->koefs = (unsigned int*)realloc(bigint1->koefs, sizeof(unsigned int) * (len1 + 2));
                 if (bigint1->koefs == NULL) {
                     return 1;
                 }
-                bigint1->koefs[len1 + 1] = (high1 + buffer) & (BASE - 1);
-                bigint1->high_digit = (int)((high1 + buffer) >> (sizeof(int) * 8));
+                bigint1->koefs[len1 + 1] = (buffer) & (BASE - 1);
+                bigint1->high_digit = (int)((buffer) >> (sizeof(int) * 8));
                 bigint1->koefs[0] = len1 + 1;
             }
             SetSign(bigint1, sign1);
@@ -238,15 +239,16 @@ int SumTwoWithoutNew(BigInt* bigint1, BigInt* bigint2) {
             return 1;
         }
 
-        unsigned int buffer = high1;
+        unsigned long long int buffer = (unsigned long long int)high1;
         for (unsigned int i = 1; i <= len2; i++) {
-            bigint1->koefs[i] = ((buffer + bigint2->koefs[i]) & (BASE - 1));
-            buffer = (buffer + bigint2->koefs[i]) >> (sizeof(int) * 8);
+            buffer += (unsigned long long int)bigint2->koefs[i];
+            bigint1->koefs[i] = (buffer & (BASE - 1));
+            buffer = (buffer >> (sizeof(int) * 8));
         }
 
         if (buffer != 0) {
-            if (buffer + high2 < (BASE >> 1)) {
-                bigint1->high_digit = buffer + high2;
+            if ((unsigned int)buffer + high2 < (BASE >> 1)) {
+                bigint1->high_digit = (unsigned int)buffer + high2;
                 len1 = len2;
             }
             else {
@@ -270,8 +272,6 @@ int SumTwoWithoutNew(BigInt* bigint1, BigInt* bigint2) {
     }
 
     if (bigint1->koefs != NULL && bigint2->koefs != NULL) {                   //2 больших числа
-        //printf("0) ");
-        //PrintBigInt(bigint1);
         unsigned long long int buffer = 0;
         for (unsigned int i = 1; i <= ((len1 < len2) ? len1 : len2); i++) {
             buffer = (unsigned long long)(bigint1->koefs[i] + bigint2->koefs[i]) + buffer;
@@ -280,8 +280,8 @@ int SumTwoWithoutNew(BigInt* bigint1, BigInt* bigint2) {
         }
 
         if (len1 == len2) {
-            if (high1 + high2 + buffer < (BASE >> 1)) {
-                bigint1->high_digit = (int)(high1 + high2 + buffer);
+            if ((high1 + high2 + (unsigned int)buffer) < (BASE >> 1)) {
+                bigint1->high_digit = (int)(high1 + high2 + (unsigned int)buffer);
                 SetSign(bigint1, sign1);
                 return 0;
             }
@@ -299,15 +299,15 @@ int SumTwoWithoutNew(BigInt* bigint1, BigInt* bigint2) {
         }
 
         else if (len1 > len2) {
+            buffer += high2;
             for (unsigned int i = len2 + 1; i <= len1; i++) {
-                bigint1->koefs[i] = ((bigint1->koefs[i] + buffer) & (BASE - 1));
-                buffer = ((bigint1->koefs[i] + buffer) >> (sizeof(int) * 8));
-                bigint1->koefs[i] = ((bigint1->koefs[i] + high2) & (BASE - 1));
-                high2 = ((bigint1->koefs[i] + high2) >> (sizeof(int) * 8));
+                buffer += (unsigned long long int)bigint1->koefs[i];
+                bigint1->koefs[i] = (unsigned int)(buffer & (BASE - 1));
+                buffer >>= (sizeof(int) * 8);
             }
-            if (buffer || high2) {
-                if ((high1 + high2 + buffer) < (BASE >> 1)) {
-                    bigint1->high_digit = (int)(high1 + high2 + buffer);
+            if (buffer) {
+                if ((high1 + buffer) < (BASE >> 1)) {
+                    bigint1->high_digit = (int)(high1 + buffer);
                     bigint1->koefs[0] = len1;
                     SetSign(bigint1, sign1);
                     return 0;
@@ -317,15 +317,15 @@ int SumTwoWithoutNew(BigInt* bigint1, BigInt* bigint2) {
                     if (bigint1->koefs == NULL) {
                         return 1;
                     }
-                    bigint1->koefs[len1 + 1] = ((high1 + high2 + buffer) & (BASE - 1));
-                    bigint1->high_digit = (int)((high1 + high2 + buffer) >> (sizeof(int) * 8));
+                    bigint1->koefs[len1 + 1] = ((high1 + buffer) & (BASE - 1));
+                    bigint1->high_digit = (int)((high1 + buffer) >> (sizeof(int) * 8));
                     bigint1->koefs[0] = len1 + 1;
                     SetSign(bigint1, sign1);
                     return 0;
                 }
             }
             else {
-                bigint1->high_digit = 0;
+                bigint1->high_digit = high1;
                 SetSign(bigint1, sign1);
                 return 0;
             }
@@ -339,25 +339,17 @@ int SumTwoWithoutNew(BigInt* bigint1, BigInt* bigint2) {
             buffer += (unsigned long long int)high1;
             for (unsigned int i = len1 + 1; i <= len2; i++) {
                 buffer += (unsigned long long int)bigint2->koefs[i];
-                printf("1 BEFORE) %llu %u %u %u %u %u\n", buffer, bigint1->koefs[i], bigint2->koefs[i], len1, len2, i);
-                PrintBigInt(bigint1);
                 bigint1->koefs[i] = (unsigned int)(buffer & (BASE - 1));
                 buffer >>= (sizeof(int) * 8);
-                printf("1) %llu %u %u %u %u %u\n", buffer, bigint1->koefs[i], bigint2->koefs[i], len1, len2, i);
-                //printf("2) ");
-                PrintBigInt(bigint1);
             }
             if (buffer) {
-                printf("A\n");
                 if ((high2 + buffer) < (BASE >> 1)) {
-                    printf("B\n");
                     bigint1->high_digit = (int)(high2 + buffer);
                     bigint1->koefs[0] = len2;
                     SetSign(bigint1, sign1);
                     return 0;
                 }
                 else {
-                    printf("C\n");
                     bigint1->koefs = (unsigned int*)realloc(bigint1->koefs, sizeof(int) * (len2 + 2));
                     if (bigint1->koefs == NULL) {
                         return 1;
@@ -370,7 +362,6 @@ int SumTwoWithoutNew(BigInt* bigint1, BigInt* bigint2) {
                 }
             }
             else {
-                printf("D\n");
                 bigint1->high_digit = high2;
                 bigint1->koefs[0] = len2;
                 SetSign(bigint1, sign1);
@@ -382,7 +373,33 @@ int SumTwoWithoutNew(BigInt* bigint1, BigInt* bigint2) {
 
 
 int DiffTwoWithoutNew(BigInt* bigint1, BigInt* bigint2) {
-    return 0;
+    if (bigint1 == NULL || bigint2 == NULL) {
+        return 1;
+    }
+
+    int sign1 = GetSign(bigint1),
+        sign2 = GetSign(bigint2);
+
+    if (sign1 == 2 || sign2 == 2) {
+        return 1;
+    }
+
+    //разные знаки - сложение
+    if (sign1 != sign2) {
+        SetSign(bigint2, sign1);
+        if (SumTwoWithoutNew(bigint1, bigint2)) {
+            SetSign(bigint2, sign2);
+            return 1;
+        }
+        SetSign(bigint2, sign2);
+        return 0;
+    }
+
+    unsigned int high1 = (unsigned int)bigint1->high_digit & (~SIGN_MASK),
+        high2 = (unsigned int)bigint2->high_digit & (~SIGN_MASK),
+        len1 = (bigint1->koefs == NULL) ? 0 : bigint1->koefs[0],
+        len2 = (bigint2->koefs == NULL) ? 0 : bigint2->koefs[0];
+
 }
 
 
@@ -405,6 +422,8 @@ BigInt* SumTwo(BigInt* bigint1, BigInt* bigint2) {
         DeInit(result);
         return NULL;
     }
+    printf("COPY1: ");
+    PrintBigInt(result);
     if (SumTwoWithoutNew(result, bigint2)) {
         DeInit(result);
         return NULL;
@@ -463,10 +482,11 @@ int main() {
 
     num1->koefs = (unsigned int*)realloc(num1->koefs, 4 * sizeof(unsigned int));
     num1->koefs[0] = 3;
-    num1->koefs[1] = 4765;
+    num1->koefs[1] = 4765;          //4765
     num1->koefs[2] = 423567898;
     num1->koefs[3] = 4565644;
     num1->high_digit = 98764456;
+    //SetSign(num1, 1);
 
     num2->koefs = (unsigned int*)realloc(num2->koefs, 6 * sizeof(unsigned int));
     num2->koefs[0] = 5;
@@ -475,20 +495,19 @@ int main() {
     num2->koefs[3] = 876543234;
     num2->koefs[4] = 45765434;
     num2->koefs[5] = 634;
-    num2->high_digit = 6;
-    // SetSign(num2, 1);
+    num2->high_digit = 6;    //6
+    //SetSign(num2, 1);
 
     PrintBigInt(num1);
     PrintBigInt(num2);
-    if (SumTwoWithoutNew(num1, num2)) {
-        DeInit(num1);
-        DeInit(num2);
-        return 0;
-    };
+    BigInt* result = SumTwo(num2, num1);
+    SumTwoWithoutNew(num2, num1);
     
     printf("RESULT: ");
-    PrintBigInt(num1);
+    PrintBigInt(result);
+    printf("RESULT: ");
     PrintBigInt(num2);
+    PrintBigInt(num1);
 
 
     // BigInt* diff1 = DiffTwo(num1, num2);
@@ -500,6 +519,7 @@ int main() {
 
     DeInit(num1);
     DeInit(num2);
+    DeInit(result);
     // DeInit(sum1);
     // DeInit(diff1);
     // DeInit(mult1);
