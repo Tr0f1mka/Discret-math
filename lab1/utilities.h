@@ -6,8 +6,8 @@
 #include <stdlib.h>
 
 
-#define SIGN_MASK (1U<<31)
-#define BASE (256U*256U*256U*256U)
+#define SIGN_MASK (1U<<(sizeof(int)*8-1))
+#define BASE (1U<<(sizeof(int)*8))
 
 
 typedef struct BigInt {
@@ -25,6 +25,7 @@ int GetSign(BigInt* big_int);
 int AbsCompare(BigInt* num1, BigInt* num2);
 int hiword(int value);
 int loword(int value);
+int CopyBigInt(BigInt* source, BigInt* target);
 
 
 #endif

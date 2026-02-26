@@ -81,8 +81,12 @@ int GetSign(BigInt* big_int) {
     /*
     Получение знака длинного целого числа
     Вход: длинного целого числа
-    Возврат: 0 - "+", 1 - "-"
+    Возврат: 0 - "+", 1 - "-", 2 - ошибка
     */
+
+    if (big_int == NULL) {
+        return 2;
+    }
     
     return (big_int->high_digit & SIGN_MASK) != 0;
 }
@@ -95,17 +99,18 @@ int AbsCompare(BigInt* num1, BigInt* num2) {
     Возврат: 1 - первое число больше, 0 - числа равны, -1 - второе число больше, 2 - ошибка
     */
 
-    if (num1 == NULL || num1->koefs == NULL || num2 == NULL || num2->koefs == NULL) {
+    if (num1 == NULL || num2 == NULL) {
         return 2;
     }
 
-    unsigned int len1 = num1->koefs[0], len2 = num2->koefs[0];
+    unsigned int len1 = (num1->koefs == NULL ? 1 : num1->koefs[0]),
+                 len2 = (num2->koefs == NULL ? 1 : num2->koefs[0]);
 
     if (len1 != len2) {
         return (len1 > len2) ? 1 : -1;
     }
 
-    for (int i = 1; i <= len1; i++) {
+    for (int i = 1; i < len1; i++) {
 
         if (num1->koefs[i] > num2->koefs[i]) {
             return 1;
@@ -114,6 +119,16 @@ int AbsCompare(BigInt* num1, BigInt* num2) {
             return -1;
         }
 
+    }
+
+    int high1 = num1->high_digit & (~SIGN_MASK);
+    int high2 = num2->high_digit & (~SIGN_MASK);
+    
+    if (high1 > high2) {
+        return 1;
+    }
+    if (high1 < high2) {
+        return -1;
     }
 
     return 0;
@@ -127,4 +142,35 @@ int hiword(int value) {
 
 int loword(int value) {
     return value & ((1 << (sizeof(value) << 2)) - 1);
+}
+
+
+int CopyBigInt(BigInt* source, BigInt* target) {
+    /*
+    Копирование длинного целого числа в другое длинное целое число
+    Вход: 2 длинных целых числа - источник и приёмник
+    Возврат: 0 - успех, 1 - ошибка
+    */
+    
+    if (source == NULL || target == NULL) {
+        return 1;
+    }
+
+    target->high_digit = source->high_digit;
+    if (source->koefs == NULL) {
+        free(target->koefs);
+        target->koefs = NULL;
+        return 0;
+    }
+
+    target->koefs = (unsigned int*)realloc(target->koefs, sizeof(unsigned int)*(source->koefs[0]));
+    if (target->koefs == NULL) {
+        return 1;
+    }
+
+    for (unsigned int i = 0; i < source->koefs[0]; i++) {
+        target->koefs[i] = source->koefs[i];
+    }
+
+    return 0;
 }
