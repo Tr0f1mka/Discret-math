@@ -117,7 +117,6 @@ int AbsCompare(BigInt* num1, BigInt* num2) {
             return -1;
         }
     }
-
     else if (num1->koefs != NULL && num2->koefs == NULL) {
         return 1;
     }
@@ -137,18 +136,17 @@ int AbsCompare(BigInt* num1, BigInt* num2) {
             if (high1 > high2) {
                 return 1;
             }
-            else if (high1 == high2) {
-                return 0;
-            }
-            else {
+            else if (high1 < high2) {
                 return -1;
             }
-            for (unsigned int i = num1->koefs[0]; i > 0; i--) {
-                if (num1->koefs[i] > num2->koefs[i]) {
-                    return 1;
-                }
-                else if (num1->koefs[i] < num2->koefs[i]) {
-                    return -1;
+            else {
+                for (unsigned int i = num1->koefs[0]; i > 0; i--) {
+                    if (num1->koefs[i] > num2->koefs[i]) {
+                        return 1;
+                    }
+                    else if (num1->koefs[i] < num2->koefs[i]) {
+                        return -1;
+                    }
                 }
             }
         }
