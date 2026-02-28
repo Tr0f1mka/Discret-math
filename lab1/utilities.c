@@ -233,7 +233,7 @@ int Normolize(BigInt* bigint) {
     }
 
     if (i != bigint->koefs[0]) {
-        if (bigint->koefs[i] < (BASE >> 1)) {
+        if (bigint->koefs[i] <= (BASE >> 1)) {
             bigint->high_digit = (int)bigint->koefs[i];
             bigint->koefs = (unsigned int*)realloc(bigint->koefs, i);
             if (bigint->koefs == NULL) {
@@ -253,4 +253,19 @@ int Normolize(BigInt* bigint) {
     }
     
     return 0;
+}
+
+
+int LShiftBigInt(BigInt* bigint, int shift) {
+    /*
+    
+    */
+
+    if (bigint == NULL) {
+        return 1;
+    }
+}
+
+int RShiftBigInt(BigInt* bigint, int shift) {
+
 }

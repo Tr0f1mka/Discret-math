@@ -6,8 +6,8 @@
 #include <stdlib.h>
 
 
-#define SIGN_MASK (1U<<(sizeof(int)*8-1))
-#define BASE (1U<<(sizeof(int)*8))
+#define SIGN_MASK (1U<<((sizeof(int)<<3)-1))
+#define BASE (0U-1)
 
 
 typedef struct BigInt {
@@ -29,6 +29,8 @@ unsigned int uhiword(unsigned int value);
 unsigned int uloword(unsigned int value);
 int CopyBigInt(BigInt* source, BigInt* target);
 int Normolize(BigInt* bigint);
+int LShiftBigInt(BigInt* bigint, int shift);
+int RShiftBigInt(BigInt* bigint, int shift);
 
 
 #endif
