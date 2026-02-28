@@ -25,7 +25,10 @@ int GetSign(BigInt* big_int);
 int AbsCompare(BigInt* num1, BigInt* num2);
 int hiword(int value);
 int loword(int value);
+unsigned int uhiword(unsigned int value);
+unsigned int uloword(unsigned int value);
 int CopyBigInt(BigInt* source, BigInt* target);
+int Normolize(BigInt* bigint);
 
 
 #endif

@@ -164,6 +164,15 @@ int loword(int value) {
     return value & ((1 << (sizeof(value) << 2)) - 1);
 }
 
+unsigned int uhiword(unsigned int value) {
+    return (value >> (sizeof(value) << 2)) & ((1 << (sizeof(value) << 2)) - 1);
+}
+
+
+unsigned int uloword(unsigned int value) {
+    return value & ((1 << (sizeof(value) << 2)) - 1);
+}
+
 
 int CopyBigInt(BigInt* source, BigInt* target) {
     /*
@@ -183,14 +192,65 @@ int CopyBigInt(BigInt* source, BigInt* target) {
         return 0;
     }
 
-    target->koefs = (unsigned int*)realloc(target->koefs, sizeof(unsigned int) * (source->koefs[0]+1));
+    target->koefs = (unsigned int*)realloc(target->koefs, sizeof(unsigned int) * (source->koefs[0] + 1));
     if (target->koefs == NULL) {
         return 1;
     }
 
-    for (unsigned int i = 0; i < source->koefs[0]+1; i++) {
+    for (unsigned int i = 0; i < source->koefs[0] + 1; i++) {
         target->koefs[i] = source->koefs[i];
     }
 
+    return 0;
+}
+
+
+int Normolize(BigInt* bigint) {
+    /*
+    Убирает ведущие нули
+    Вход: длинное целое число
+    Возврат: 0 - успех, 1 - ошибка
+    */
+
+    if (bigint == NULL) {
+        return 1;
+    }
+
+    if (bigint->koefs == NULL) {
+        return 0;
+    }
+
+    unsigned int high = bigint->high_digit & (~SIGN_MASK),
+                 sign = GetSign(bigint);
+
+    if (high != 0) {
+        return 0;
+    }
+
+    unsigned i = bigint->koefs[0];
+    while (bigint->koefs[i] == 0) {
+        i--;
+    }
+
+    if (i != bigint->koefs[0]) {
+        if (bigint->koefs[i] < (BASE >> 1)) {
+            bigint->high_digit = (int)bigint->koefs[i];
+            bigint->koefs = (unsigned int*)realloc(bigint->koefs, i);
+            if (bigint->koefs == NULL) {
+                return 1;
+            }
+            bigint->koefs[0] = i - 1;
+        }
+        else {
+            bigint->high_digit = 0;
+            bigint->koefs = (unsigned int*)realloc(bigint->koefs, i + 1);
+            if (bigint->koefs == NULL) {
+                return 1;
+            }
+            bigint->koefs[0] = i;
+        }
+        SetSign(bigint, sign);
+    }
+    
     return 0;
 }
