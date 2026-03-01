@@ -18,7 +18,8 @@ int SumTwoWithoutNew(BigInt* bigint1, BigInt* bigint2);
 int DiffTwoWithoutNew(BigInt* bigint1, BigInt* bigint2);
 int MultTwoWithoutNew(BigInt* bigint1, BigInt* bigint2);
 int KaratsubaWithoutNew(BigInt* bigint1, BigInt* bigint2);
-
+int Af(unsigned int n, int (*f)(BigInt* bigint1, BigInt* bigint2), BigInt* result);
+int F(unsigned int n, int (*f)(BigInt* bigint1, BigInt* bigint2), BigInt* result);
 
 
 BigInt* Init() {
@@ -373,6 +374,7 @@ int SumTwoWithoutNew(BigInt* bigint1, BigInt* bigint2) {
             }
         }
     }
+    return 0;
 }
 
 
@@ -486,28 +488,11 @@ int DiffTwoWithoutNew(BigInt* bigint1, BigInt* bigint2) {
         }
     }
 
-    if (big->koefs != NULL && big->high_digit == 0) {       //удаление ведущих нулей
-        unsigned int i = big_len;
-        while (big->koefs[i] == 0) {
-            i--;
+    if (Normolize(big)) {
+        if (compare_result == -1) {
+            DeInit(big);
         }
-        if (big->koefs[i] <= (BASE >> 1)) {
-            big->high_digit = (int)(big->koefs[i]);
-            i--;
-        }
-        if (big_len != i) {
-            if (i) {
-                big->koefs = (unsigned int*)realloc(big->koefs, sizeof(int) * (i + 1));
-                if (big->koefs == NULL) {
-                    return 1;
-                }
-                big->koefs[0] = i;
-            }
-            else {
-                free(big->koefs);
-                big->koefs = NULL;
-            }
-        }
+        return 1;
     }
 
     SetSign(big, res_sign);
@@ -572,7 +557,7 @@ int MultTwoWithoutNew(BigInt* bigint1, BigInt* bigint2) {
     }
 
     unsigned int res_len = len1 + len2 + ((high1 == 0) ? 0 : 1) + ((high2 == 0) ? 0 : 1);
-    unsigned int* result = (unsigned int*)calloc(res_len, sizeof(int) * (res_len + 1));
+    unsigned int* result = (unsigned int*)calloc(res_len + 1, sizeof(int) * (res_len + 1));
     if (result == NULL) {
         return 1;
     }
@@ -691,7 +676,158 @@ int MultTwoWithoutNew(BigInt* bigint1, BigInt* bigint2) {
 
 
 int KaratsubaWithoutNew(BigInt* bigint1, BigInt* bigint2) {
+    /*
+    Умножение двух длинных целых чисел алгоритмом Карацубы (результат в первом множителе)
+    Вход: 2 длинных целых числа
+    Возврат: 0 - успех, 1 - ошибка
+    */
 
+    if (bigint1 == NULL || bigint2 == NULL) {
+        return 1;
+    }
+
+    unsigned int high1 = bigint1->high_digit & (BASE>>1),
+                 high2 = bigint2->high_digit & (BASE>>1),
+                 len1  = ((bigint1->koefs == NULL) ? 1 : (bigint1->koefs[0] + (high1 != 0))),
+                 len2  = ((bigint2->koefs == NULL) ? 1 : (bigint2->koefs[0] + (high2 != 0))),
+                 sign1 = GetSign(bigint1),
+                 sign2 = GetSign(bigint2);
+
+    SetSign(bigint1, 0);
+    SetSign(bigint2, 0);
+    
+    if (len1 == 1 && len2 == 1) {                      //длина в одну цифру - умножаем нормально
+        if (MultTwoWithoutNew(bigint1, bigint2)) {
+            SetSign(bigint2, sign2);
+            return 1;
+        }
+        SetSign(bigint1, sign1 != sign2);
+        SetSign(bigint2, sign2);
+        return 0;
+    }
+
+    unsigned int res_split = MaxUnInt(len1, len2) >> 1;
+
+    BigInt *low_part1  = Init(),
+           *high_part1 = Init(),
+           *low_part2  = Init(),
+           *high_part2 = Init();
+    
+    //пилим числа
+    if (SplitBigint(bigint1, low_part1, high_part1, MinUnInt(res_split, len1)) || SplitBigint(bigint2, low_part2, high_part2, MinUnInt(res_split, len2))) {
+        DeInit(low_part1);
+        DeInit(high_part1);
+        DeInit(low_part2);
+        DeInit(high_part2);
+        SetSign(bigint2, sign2);
+        return 1;
+    }
+
+    //нормализуем части
+    if (Normolize(low_part1) || Normolize(high_part1) || Normolize(low_part2) || Normolize(high_part2)) {
+        DeInit(low_part1);
+        DeInit(high_part1);
+        DeInit(low_part2);
+        DeInit(high_part2);
+        SetSign(bigint2, sign2);
+        return 1;
+    }
+
+    BigInt *res_high = Init(),
+           *res_low  = Init();
+    
+    //копируем старшую и младшую половины в другие переменные
+    if (CopyBigInt(high_part1, res_high) || CopyBigInt(low_part1, res_low)) {
+        DeInit(low_part1);
+        DeInit(high_part1);
+        DeInit(low_part2);
+        DeInit(high_part2);
+        DeInit(res_high);
+        DeInit(res_low);
+        SetSign(bigint2, sign2);
+        return 1;
+    }
+
+    //перемножаем старшие и младшие части
+    if (KaratsubaWithoutNew(res_high, high_part2) || KaratsubaWithoutNew(res_low, low_part2)) {
+        DeInit(low_part1);
+        DeInit(high_part1);
+        DeInit(low_part2);
+        DeInit(high_part2);
+        DeInit(res_high);
+        DeInit(res_low);
+        SetSign(bigint2, sign2);
+        return 1;
+    }
+
+    //складываем части одного числа
+    if (SumTwoWithoutNew(low_part1, high_part1) || SumTwoWithoutNew(low_part2, high_part2)) {
+        DeInit(low_part1);
+        DeInit(high_part1);
+        DeInit(low_part2);
+        DeInit(high_part2);
+        DeInit(res_high);
+        DeInit(res_low);
+        SetSign(bigint2, sign2);
+        return 1;
+    }
+
+    //перемножаем суммы
+    if (KaratsubaWithoutNew(low_part1, low_part2)) {
+        DeInit(low_part1);
+        DeInit(high_part1);
+        DeInit(low_part2);
+        DeInit(high_part2);
+        DeInit(res_high);
+        DeInit(res_low);
+        SetSign(bigint2, sign2);
+        return 1;
+    }
+
+    //вычисление среднего члена
+    if (DiffTwoWithoutNew(low_part1, res_high) || DiffTwoWithoutNew(low_part1, res_low)) {
+        DeInit(low_part1);
+        DeInit(high_part1);
+        DeInit(low_part2);
+        DeInit(high_part2);
+        DeInit(res_high);
+        DeInit(res_low);
+        SetSign(bigint2, sign2);
+        return 1;
+    }
+
+    //вычисление результата
+    if (LShiftBigInt(res_high, res_split) || SumTwoWithoutNew(res_high, low_part1) || LShiftBigInt(res_high, res_split) || SumTwoWithoutNew(res_high, res_low)) {
+        DeInit(low_part1);
+        DeInit(high_part1);
+        DeInit(low_part2);
+        DeInit(high_part2);
+        DeInit(res_high);
+        DeInit(res_low);
+        SetSign(bigint2, sign2);
+        return 1;
+    }
+
+    //копирование результата в первый аргумент
+    if (CopyBigInt(res_high, bigint1)) {
+        DeInit(low_part1);
+        DeInit(high_part1);
+        DeInit(low_part2);
+        DeInit(high_part2);
+        DeInit(res_high);
+        DeInit(res_low);
+        SetSign(bigint2, sign2);
+        return 1;
+    }
+
+    DeInit(low_part1);
+    DeInit(high_part1);
+    DeInit(low_part2);
+    DeInit(high_part2);
+    DeInit(res_high);
+    DeInit(res_low);
+    SetSign(bigint1, sign1 != sign2);
+    SetSign(bigint2, sign2);
     return 0;
 }
 
@@ -788,53 +924,98 @@ BigInt* Karatsuba(BigInt* bigint1, BigInt* bigint2) {
 }
 
 
+int Af(unsigned int n, int (*mult)(BigInt* bigint1, BigInt* bigint2), BigInt* result) {
+    /*
+    Вычисляет функцию суммы по i от 1 до n ((-1)^(n-i)*(n!))
+    Вход: натуральное число n, указатель на функцию умножения, поле для записи результата
+    Возврат: 0 - успех, 1 - ошибка
+    */
+    
+    if (result != NULL) {
+        DeInit(result);
+    }    
+    result = Init();
+
+    if (n & 1 == 0) {     //по чётным n функция равна нулю
+        return 0;
+    }
+
+    BigInt* one = Init();
+    BigInt* cur_mult = Init();
+    one->high_digit = 1;
+    cur_mult->high_digit = 1;
+    //по нечётным - n!
+    result->high_digit = 1;
+    for (unsigned int i = 2; i <= n; i++) {
+        if (SumTwoWithoutNew(cur_mult, one)) {
+            DeInit(one);
+            DeInit(cur_mult);
+            return 1;
+        }
+        if (mult(result, cur_mult)) {
+            DeInit(one);
+            DeInit(cur_mult);
+            return 1;
+        }
+    }
+    return 0;
+}
+
+
+int F(unsigned int n, int (*f)(BigInt* bigint1, BigInt* bigint2), BigInt* result) {
+    return 0;
+}
+
+
 int main() {
+    BigInt* num0 = Init();
     BigInt* num1 = Init();
     BigInt* num2 = Init();
+    BigInt* low  = Init();
+    BigInt* high = Init();
 
-    /*num1->koefs = (unsigned int*)realloc(num1->koefs, 4 * sizeof(unsigned int));
+
+    num0->koefs = (unsigned int*)realloc(num1->koefs, 2 * sizeof(unsigned int));
+    num0->koefs[0] = 1;
+    num0->koefs[1] = 4765;
+    num0->high_digit = 6543;
+    SetSign(num0, 1);
+
+    num1->koefs = (unsigned int*)realloc(num1->koefs, 4 * sizeof(unsigned int));
     num1->koefs[0] = 3;
     num1->koefs[1] = 4765;
     num1->koefs[2] = 423567898;
-    num1->koefs[3] = 4565644;*/
+    num1->koefs[3] = 4565644;
     num1->high_digit = 98764456;
     //SetSign(num1, 1);
 
 
-
-    /*num2->koefs = (unsigned int*)realloc(num2->koefs, 6 * sizeof(unsigned int));
+    num2->koefs = (unsigned int*)realloc(num2->koefs, 6 * sizeof(unsigned int));
     num2->koefs[0] = 5;
     num2->koefs[1] = 124567;
     num2->koefs[2] = 134326;
     num2->koefs[3] = 876543234;
     num2->koefs[4] = 45765434;
-    num2->koefs[5] = 634;*/
-    num2->high_digit = 600;
+    num2->koefs[5] = 634;
+    num2->high_digit = 6;
     //SetSign(num2, 1);
-    
-    BigInt* sum = SumTwo(num1, num2);
-    BigInt* diff = DiffTwo(num1, num2);
-    BigInt* mult = MultTwo(num1, num2);
 
-    PrintBigInt(num1);
     PrintBigInt(num2);
-    PrintBigInt(sum);
-    PrintBigInt(diff);
-    PrintBigInt(mult);
 
-    printf("%d %d %d %d %d\n", num1->koefs == NULL, num2->koefs == NULL, sum->koefs == NULL, diff->koefs == NULL, mult->koefs == NULL);
+    SplitBigint(num2, low, high, 6);
 
+    printf("NUM: ");
+    PrintBigInt(num2);
+    printf("LOW: ");
+    PrintBigInt(low);
+    printf("HIGH: ");
+    PrintBigInt(high);
+
+    DeInit(num0);
     DeInit(num1);
     DeInit(num2);
-    DeInit(sum);
-    DeInit(diff);
-    DeInit(mult);
-    // DeInit(result);
-
-    //printf("%u\n", BASE);
-    //printf("%u\n", BASE>>1);
-
-
-
+    DeInit(low);
+    DeInit(high);
+        
     return 0;
 }

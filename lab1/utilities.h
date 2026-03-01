@@ -29,8 +29,8 @@ unsigned int uhiword(unsigned int value);
 unsigned int uloword(unsigned int value);
 int CopyBigInt(BigInt* source, BigInt* target);
 int Normolize(BigInt* bigint);
-int LShiftBigInt(BigInt* bigint, int shift);
-int RShiftBigInt(BigInt* bigint, int shift);
+int LShiftBigInt(BigInt* bigint, unsigned int shift);
+int SplitBigint(BigInt* bigint, BigInt* low, BigInt* high, unsigned int shift);
 
 
 #endif
