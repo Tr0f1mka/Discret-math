@@ -104,34 +104,8 @@ int InputBigInt(BigInt* big_int) {
 }
 
 
-void PrintBigInt(BigInt* big_int) {
-    /*
-    Вывод длинного целого числа в консоль
-    Вход: длинное целое число
-    Возврат: ничего
-    */
-
-    if (big_int == NULL) {
-        return;
-    }
-
-    printf("%s", (GetSign(big_int)) ? "-" : "");
-
-    if (big_int->koefs == NULL || ((big_int->high_digit) & (~SIGN_MASK)) != 0) {
-        printf("%d ", big_int->high_digit & (~SIGN_MASK));
-    }
-
-    if (big_int->koefs != NULL) {
-        for (unsigned int i = big_int->koefs[0]; i > 0; i--) {
-            printf("%u ", big_int->koefs[i]);
-        }
-    }
-
-    printf("\n");
-}
-
-
 int SumTwoWithoutNew(BigInt* bigint1, BigInt* bigint2) {
+
     if (bigint1 == NULL || bigint2 == NULL) {
         return 1;
     }
@@ -178,203 +152,86 @@ int SumTwoWithoutNew(BigInt* bigint1, BigInt* bigint2) {
         }
     }
 
+    if (bigint2->high_digit == 0 && bigint2->koefs == NULL) {
+        return 0;
+    }
+
+    if (bigint1->high_digit == 0 && bigint1->koefs == NULL) {
+        return CopyBigInt(bigint2, bigint1);
+    }
+
     unsigned int high1 = (unsigned int)bigint1->high_digit & (~SIGN_MASK),
         high2 = (unsigned int)bigint2->high_digit & (~SIGN_MASK),
-        len1 = (bigint1->koefs == NULL) ? 0 : bigint1->koefs[0],
-        len2 = (bigint2->koefs == NULL) ? 0 : bigint2->koefs[0];
+        len1 = (bigint1->koefs == NULL) ? 1 : (bigint1->koefs[0] + (high1 != 0)),
+        len2 = (bigint2->koefs == NULL) ? 1 : (bigint2->koefs[0] + (high2 != 0)),
+        res_len = MaxUnInt(len1, len2) + 1;
 
-    if (bigint1->koefs == NULL && bigint2->koefs == NULL) {                  //2 малых числа
-        unsigned long long int buffer = (unsigned long long int)high1 + (unsigned long long int)high2;
-        if (buffer < (BASE >> 1)) {
-            bigint1->high_digit = (unsigned int)buffer;
-            SetSign(bigint1, sign1);
-            return 0;
-        }
-        else {
-            bigint1->koefs = (unsigned int*)malloc(sizeof(unsigned int) * 2);
-            if (bigint1->koefs == NULL) {
-                return 1;
-            }
-            bigint1->koefs[1] = (unsigned int)((buffer) & (BASE));
-            bigint1->high_digit = (int)((buffer) >> (sizeof(int) * 8));
-            bigint1->koefs[0] = 1;
-            SetSign(bigint1, sign1);
-            return 0;
-        }
+    unsigned int* t = (unsigned int*)realloc(bigint1->koefs, sizeof(int) * (res_len + 1));     //сумма всегда помещается максимум из длин слагаемых + 1
+    if (t == NULL) {
+        return 1;
     }
+    bigint1->koefs = t;
+    bigint1->koefs[0] = res_len;
+    bigint1->high_digit = 0;
+    bigint1->koefs[res_len] = 0;
 
-    if (bigint1->koefs != NULL && bigint2->koefs == NULL) {                  //большое и малое число
+    //printf("LENS  %u %u %u\n", res_len, len1, len2);
 
-        unsigned int i = 1;
-        unsigned long long int buffer = (unsigned long long int)high2;
-        while (buffer != 0 && i <= len1) {
-            if (bigint1->koefs[i] + buffer <= BASE) {
-                bigint1->koefs[i] += buffer;
-                break;
-            }
-            buffer += (unsigned long long int)bigint1->koefs[i];
-            bigint1->koefs[i] = (unsigned int)((buffer) & (BASE));
-            buffer = (buffer) >> (sizeof(int) * 8);
-            i++;
+    unsigned int buffer = 0, s1, s2;
+    for (unsigned int i = 1; i <= res_len; i++) {
+        //Первое слагаемое
+        if (i > len1) {
+            s1 = 0;
         }
-
-        if (buffer != 0) {
-            buffer += (unsigned long long int)high1;
-            if ((buffer) <= (BASE >> 1)) {
-                bigint1->high_digit = (int)(buffer);
+        else if (i == len1) {
+            if (high1 != 0) {
+                s1 = high1;
             }
             else {
-                bigint1->koefs = (unsigned int*)realloc(bigint1->koefs, sizeof(unsigned int) * (len1 + 2));
-                if (bigint1->koefs == NULL) {
-                    return 1;
-                }
-                bigint1->koefs[len1 + 1] = (unsigned int)(buffer & BASE);
-                bigint1->high_digit = (int)((buffer) >> (sizeof(int) * 8));
-                bigint1->koefs[0] = len1 + 1;
-            }
-            SetSign(bigint1, sign1);
-        }
-
-        return 0;
-    }
-
-    if (bigint1->koefs == NULL && bigint2->koefs != NULL) {                   //малое и большое число
-        bigint1->koefs = (unsigned int*)malloc(sizeof(int) * (len2 + 1));
-        if (bigint1->koefs == NULL) {
-            return 1;
-        }
-
-        unsigned long long int buffer = (unsigned long long int)high1;
-        for (unsigned int i = 1; i <= len2; i++) {
-            buffer += (unsigned long long int)bigint2->koefs[i];
-            bigint1->koefs[i] = (buffer & BASE);
-            buffer = (buffer >> (sizeof(int) * 8));
-        }
-
-        if (buffer != 0) {
-            if ((unsigned int)buffer + high2 <= (BASE >> 1)) {
-                bigint1->high_digit = (unsigned int)buffer + high2;
-                len1 = len2;
-            }
-            else {
-                bigint1->koefs = (unsigned int*)realloc(bigint1->koefs, sizeof(int) * (len2 + 2));
-                if (bigint1->koefs == NULL) {
-                    return 1;
-                }
-                len1 = len2 + 1;
-                bigint1->koefs[len2] = ((buffer + high2) & BASE);
-                bigint1->high_digit = ((buffer + high2) >> (sizeof(int) * 8));
+                s1 = bigint1->koefs[i];
             }
         }
         else {
-            bigint1->high_digit = high2;
-            len1 = len2;
+            s1 = bigint1->koefs[i];
         }
 
-        bigint1->koefs[0] = len1;
-        SetSign(bigint1, sign1);
-        return 0;
-    }
-
-    if (bigint1->koefs != NULL && bigint2->koefs != NULL) {                   //2 больших числа
-        unsigned long long int buffer = 0;
-        for (unsigned int i = 1; i <= ((len1 < len2) ? len1 : len2); i++) {
-            buffer = (unsigned long long)(bigint1->koefs[i] + bigint2->koefs[i]) + buffer;
-            bigint1->koefs[i] = (unsigned int)(buffer & BASE);
-            buffer = (buffer >> (sizeof(int) * 8));
+        //Второе слагаемое
+        if (i > len2) {
+            s2 = 0;
         }
-
-        if (len1 == len2) {
-            if ((high1 + high2 + (unsigned int)buffer) <= (BASE >> 1)) {
-                bigint1->high_digit = (int)(high1 + high2 + (unsigned int)buffer);
-                SetSign(bigint1, sign1);
-                return 0;
+        else if (i == len2) {
+            if (high2 != 0) {
+                s2 = high2;
             }
             else {
-                bigint1->koefs = (unsigned int*)realloc(bigint1->koefs, sizeof(int) * (len1 + 2));
-                if (bigint1->koefs == NULL) {
-                    return 1;
-                }
-                bigint1->koefs[len1 + 1] = ((high1 + high2 + buffer) & BASE);
-                bigint1->high_digit = ((high1 + high2 + buffer) >> (sizeof(int) << 3));
-                bigint1->koefs[0] = len1 + 1;
-                SetSign(bigint1, sign1);
-                return 0;
+                s2 = bigint2->koefs[i];
             }
         }
-
-        else if (len1 > len2) {
-            buffer += high2;
-            for (unsigned int i = len2 + 1; i <= len1; i++) {
-                buffer += (unsigned long long int)bigint1->koefs[i];
-                bigint1->koefs[i] = (unsigned int)(buffer & BASE);
-                buffer >>= (sizeof(int) * 8);
-            }
-            if (buffer) {
-                if ((high1 + buffer) <= (BASE >> 1)) {
-                    bigint1->high_digit = (int)(high1 + buffer);
-                    bigint1->koefs[0] = len1;
-                    SetSign(bigint1, sign1);
-                    return 0;
-                }
-                else {
-                    bigint1->koefs = (unsigned int*)realloc(bigint1->koefs, sizeof(int) * (len1 + 2));
-                    if (bigint1->koefs == NULL) {
-                        return 1;
-                    }
-                    bigint1->koefs[len1 + 1] = ((high1 + buffer) & BASE);
-                    bigint1->high_digit = (int)((high1 + buffer) >> (sizeof(int) << 3));
-                    bigint1->koefs[0] = len1 + 1;
-                    SetSign(bigint1, sign1);
-                    return 0;
-                }
-            }
-            else {
-                bigint1->high_digit = high1;
-                SetSign(bigint1, sign1);
-                return 0;
-            }
-        }
-
         else {
-            bigint1->koefs = (unsigned int*)realloc(bigint1->koefs, sizeof(unsigned int) * (len2 + 1));
-            if (bigint1->koefs == NULL) {
-                return 1;
-            }
-            buffer += (unsigned long long int)high1;
-            for (unsigned int i = len1 + 1; i <= len2; i++) {
-                buffer += (unsigned long long int)bigint2->koefs[i];
-                bigint1->koefs[i] = (unsigned int)(buffer & BASE);
-                buffer >>= (sizeof(int) * 8);
-            }
-            if (buffer) {
-                if ((high2 + buffer) <= (BASE >> 1)) {
-                    bigint1->high_digit = (int)(high2 + buffer);
-                    bigint1->koefs[0] = len2;
-                    SetSign(bigint1, sign1);
-                    return 0;
-                }
-                else {
-                    bigint1->koefs = (unsigned int*)realloc(bigint1->koefs, sizeof(int) * (len2 + 2));
-                    if (bigint1->koefs == NULL) {
-                        return 1;
-                    }
-                    bigint1->koefs[len1 + 1] = ((high2 + buffer) & BASE);
-                    bigint1->high_digit = (int)((high2 + buffer) >> (sizeof(int) << 3));
-                    bigint1->koefs[0] = len2 + 1;
-                    SetSign(bigint1, sign1);
-                    return 0;
-                }
-            }
-            else {
-                bigint1->high_digit = high2;
-                bigint1->koefs[0] = len2;
-                SetSign(bigint1, sign1);
-                return 0;
-            }
+            s2 = bigint2->koefs[i];
         }
+
+        //printf("%u) %u %u\n", i, s1, s2);
+
+        unsigned int ls1 = loword(s1),
+            hs1 = hiword(s1),
+            ls2 = loword(s2),
+            hs2 = hiword(s2);
+
+        s1 = ls1 + ls2 + buffer;
+        s2 = hs1 + hs2;
+
+        s2 += hiword(s1);
+        buffer = hiword(s2);
+
+        s1 = loword(s1);
+        s2 = loword(s2);
+
+        bigint1->koefs[i] = (s2 << (sizeof(int) << 2)) + s1;
     }
-    return 0;
+
+    SetSign(bigint1, sign1);
+    return Normolize(bigint1);
 }
 
 
@@ -520,43 +377,33 @@ int MultTwoWithoutNew(BigInt* bigint1, BigInt* bigint2) {
 
     unsigned int high1 = (unsigned int)bigint1->high_digit & (~SIGN_MASK),
         high2 = (unsigned int)bigint2->high_digit & (~SIGN_MASK),
-        len1 = (bigint1->koefs == NULL) ? 0 : bigint1->koefs[0],
-        len2 = (bigint2->koefs == NULL) ? 0 : bigint2->koefs[0];
+        len1 = ((bigint1->koefs == NULL) ? 1 : bigint1->koefs[0] + (high1 != 0)),
+        len2 = ((bigint2->koefs == NULL) ? 1 : bigint2->koefs[0] + (high2 != 0));
 
-    if (high1 == 0 && len1 == 0) {        //0 в первом множителе
+    if (high1 == 0 && bigint1->koefs == NULL) {        //0 в первом множителе
         return 0;
     }
-    if (high2 == 0 && len2 == 0) {        //0 во втором множителе
+    if (high2 == 0 && bigint2->koefs == NULL) {        //0 во втором множителе
         bigint1->high_digit = 0;
         free(bigint1->koefs);
         bigint1->koefs = NULL;
         return 0;
     }
 
-    if (high2 == 1 && len2 == 0) {        //1 во втором множителе
-        if (sign1 != sign2) {
-            SetSign(bigint1, 1);
-        }
-        else {
-            SetSign(bigint1, 0);
-        }
+    if (high2 == 1 && bigint2->koefs == NULL) {        //1 во втором множителе
+        SetSign(bigint1, sign1 != sign2);
         return 0;
     }
 
-    if (high1 == 1 && len1 == 0) {        //1 в первом множителе
+    if (high1 == 1 && bigint1->koefs == NULL) {        //1 в первом множителе
         if (CopyBigInt(bigint2, bigint1)) {
             return 1;
         }
-        if (sign1 != sign2) {
-            SetSign(bigint1, 1);
-        }
-        else {
-            SetSign(bigint1, 0);
-        }
+        SetSign(bigint1, sign1 != sign2);
         return 0;
     }
 
-    unsigned int res_len = len1 + len2 + ((high1 == 0) ? 0 : 1) + ((high2 == 0) ? 0 : 1);
+    unsigned int res_len = len1 + len2;
     unsigned int* result = (unsigned int*)calloc(res_len + 1, sizeof(int) * (res_len + 1));
     if (result == NULL) {
         return 1;
@@ -564,13 +411,27 @@ int MultTwoWithoutNew(BigInt* bigint1, BigInt* bigint2) {
 
     unsigned long long int buffer;
     unsigned int mul1, mul2;
-    len1 += ((high1 == 0) ? 0 : 1);
-    len2 += ((high2 == 0) ? 0 : 1);
+
+    //printf("res_len: %u len1: %u len2: %u\n", res_len, len1, len2);
     for (unsigned int i = 1; i <= res_len; i++) {
         for (unsigned int j = 1; j <= len1; j++) {
             if ((i + 1 - j <= len2) && (i + 1 - j > 0)) {
-                mul1 = ((j == len1) ? high1 : bigint1->koefs[j]);
-                mul2 = (((i + 1 - j) == len2) ? high2 : bigint2->koefs[i + 1 - j]);
+                //printf("%u %u\n", i, j);
+                if (j == len1 && high1 != 0) {
+                    mul1 = high1;
+                }
+                else {
+                    mul1 = bigint1->koefs[j];
+                }
+                if ((i+1-j) == len2 && high2 != 0) {
+                    mul2 = high2;
+                }
+                else {
+                    mul2 = bigint2->koefs[i + 1 - j];
+                }
+                        
+                //mul1 = ((j == len1) ? high1 : bigint1->koefs[j]);
+                //mul2 = (((i + 1 - j) == len2) ? high2 : bigint2->koefs[i + 1 - j]);
                 unsigned int m1 = uloword(mul1) * uloword(mul2),
                     m2 = uloword(mul1) * uhiword(mul2),
                     m3 = uhiword(mul1) * uloword(mul2),
@@ -582,6 +443,7 @@ int MultTwoWithoutNew(BigInt* bigint1, BigInt* bigint2) {
                 buffer += (unsigned long long int)m2;
                 buffer <<= (sizeof(int) << 2);
                 buffer += (unsigned long long int)m1;
+                //printf("%u * %u = %llu\n", mul1, mul2, buffer);
                 //printf("%u BEFORE) %u %u %llu %u %u %u %u %u %u %u\n", i, mul1, mul2, buffer, j, i + 1 - j, result[i], m1, m2, m3, m4);
                 //printf("RESULT: ");
                 //for (unsigned int o = 1; o <= res_len; o++) {
@@ -685,18 +547,30 @@ int KaratsubaWithoutNew(BigInt* bigint1, BigInt* bigint2) {
     if (bigint1 == NULL || bigint2 == NULL) {
         return 1;
     }
-
-    unsigned int high1 = bigint1->high_digit & (BASE>>1),
-                 high2 = bigint2->high_digit & (BASE>>1),
-                 len1  = ((bigint1->koefs == NULL) ? 1 : (bigint1->koefs[0] + (high1 != 0))),
-                 len2  = ((bigint2->koefs == NULL) ? 1 : (bigint2->koefs[0] + (high2 != 0))),
-                 sign1 = GetSign(bigint1),
-                 sign2 = GetSign(bigint2);
+    
+    unsigned int high1 = bigint1->high_digit & (BASE >> 1),
+        high2 = bigint2->high_digit & (BASE >> 1),
+        len1 = ((bigint1->koefs == NULL) ? 1 : (bigint1->koefs[0] + (high1 != 0))),
+        len2 = ((bigint2->koefs == NULL) ? 1 : (bigint2->koefs[0] + (high2 != 0))),
+        sign1 = GetSign(bigint1),
+        sign2 = GetSign(bigint2),
+        res_split = MaxUnInt(len1, len2) >> 1;
 
     SetSign(bigint1, 0);
     SetSign(bigint2, 0);
-    
-    if (len1 == 1 && len2 == 1) {                      //длина в одну цифру - умножаем нормально
+
+    if (high1 == 0 && bigint1->koefs == NULL) {
+        return 0;
+    }
+
+    if (high2 == 0 && bigint2->koefs == NULL) {
+        bigint1->high_digit = 0;
+        free(bigint1->koefs);
+        bigint1->koefs = NULL;
+        return 0;
+    }
+
+    if ((len1 == 1) && (len2 == 1)) {
         if (MultTwoWithoutNew(bigint1, bigint2)) {
             SetSign(bigint2, sign2);
             return 1;
@@ -706,15 +580,15 @@ int KaratsubaWithoutNew(BigInt* bigint1, BigInt* bigint2) {
         return 0;
     }
 
-    unsigned int res_split = MaxUnInt(len1, len2) >> 1;
+    BigInt* low_part1 = Init(),
+        * high_part1 = Init(),
+        * low_part2 = Init(),
+        * high_part2 = Init();
 
-    BigInt *low_part1  = Init(),
-           *high_part1 = Init(),
-           *low_part2  = Init(),
-           *high_part2 = Init();
-    
     //пилим числа
-    if (SplitBigint(bigint1, low_part1, high_part1, MinUnInt(res_split, len1)) || SplitBigint(bigint2, low_part2, high_part2, MinUnInt(res_split, len2))) {
+    if (SplitBigint(bigint1, low_part1, high_part1, MinUnInt(res_split, len1))
+        || SplitBigint(bigint2, low_part2, high_part2, MinUnInt(res_split, len2))) {
+
         DeInit(low_part1);
         DeInit(high_part1);
         DeInit(low_part2);
@@ -722,9 +596,17 @@ int KaratsubaWithoutNew(BigInt* bigint1, BigInt* bigint2) {
         SetSign(bigint2, sign2);
         return 1;
     }
+
+    /*printf("%u\n", MinUnInt(res_split, len1));
+    PrintBigInt(low_part1);
+    PrintBigInt(high_part1);*/
 
     //нормализуем части
-    if (Normolize(low_part1) || Normolize(high_part1) || Normolize(low_part2) || Normolize(high_part2)) {
+    if (Normolize(low_part1)
+        || Normolize(high_part1)
+        || Normolize(low_part2)
+        || Normolize(high_part2)) {
+        
         DeInit(low_part1);
         DeInit(high_part1);
         DeInit(low_part2);
@@ -733,11 +615,13 @@ int KaratsubaWithoutNew(BigInt* bigint1, BigInt* bigint2) {
         return 1;
     }
 
-    BigInt *res_high = Init(),
-           *res_low  = Init();
-    
+    BigInt* res_high = Init(),
+          * res_low = Init();
+
     //копируем старшую и младшую половины в другие переменные
-    if (CopyBigInt(high_part1, res_high) || CopyBigInt(low_part1, res_low)) {
+    if (CopyBigInt(high_part1, res_high)
+        || CopyBigInt(low_part1, res_low)) {
+        
         DeInit(low_part1);
         DeInit(high_part1);
         DeInit(low_part2);
@@ -749,7 +633,9 @@ int KaratsubaWithoutNew(BigInt* bigint1, BigInt* bigint2) {
     }
 
     //перемножаем старшие и младшие части
-    if (KaratsubaWithoutNew(res_high, high_part2) || KaratsubaWithoutNew(res_low, low_part2)) {
+    if (KaratsubaWithoutNew(res_high, high_part2)
+        || KaratsubaWithoutNew(res_low, low_part2)) {
+        
         DeInit(low_part1);
         DeInit(high_part1);
         DeInit(low_part2);
@@ -760,62 +646,98 @@ int KaratsubaWithoutNew(BigInt* bigint1, BigInt* bigint2) {
         return 1;
     }
 
+    /*printf("CUR:\n");
+    PrintBigInt(bigint1);
+    PrintBigInt(bigint2);
+    PrintBigInt(res_high);
+    PrintBigInt(res_low);
+    printf("END CUR\n");*/
+
     //складываем части одного числа
-    if (SumTwoWithoutNew(low_part1, high_part1) || SumTwoWithoutNew(low_part2, high_part2)) {
+    BigInt* medium = SumTwo(low_part1, high_part1);
+
+    if (medium == NULL
+        || SumTwoWithoutNew(low_part2, high_part2)) {
+        
         DeInit(low_part1);
         DeInit(high_part1);
         DeInit(low_part2);
         DeInit(high_part2);
         DeInit(res_high);
         DeInit(res_low);
+        DeInit(medium);
         SetSign(bigint2, sign2);
         return 1;
     }
 
     //перемножаем суммы
-    if (KaratsubaWithoutNew(low_part1, low_part2)) {
+    if (KaratsubaWithoutNew(medium, low_part2)) {
+        
         DeInit(low_part1);
         DeInit(high_part1);
         DeInit(low_part2);
         DeInit(high_part2);
         DeInit(res_high);
         DeInit(res_low);
+        DeInit(medium);
         SetSign(bigint2, sign2);
         return 1;
     }
 
+    /*printf("\nCUR:\n");
+    PrintBigInt(bigint1);
+    PrintBigInt(bigint2);
+    PrintBigInt(res_high);
+    PrintBigInt(res_low);
+    PrintBigInt(low_part1);
+    PrintBigInt(high_part1);
+    PrintBigInt(low_part2);
+    PrintBigInt(high_part2);
+    PrintBigInt(medium);
+    printf("END CUR\n");*/
+
     //вычисление среднего члена
-    if (DiffTwoWithoutNew(low_part1, res_high) || DiffTwoWithoutNew(low_part1, res_low)) {
+    if (DiffTwoWithoutNew(medium, res_high)
+        || DiffTwoWithoutNew(medium, res_low)) {
+        
         DeInit(low_part1);
         DeInit(high_part1);
         DeInit(low_part2);
         DeInit(high_part2);
         DeInit(res_high);
         DeInit(res_low);
+        DeInit(medium);
         SetSign(bigint2, sign2);
         return 1;
     }
 
     //вычисление результата
-    if (LShiftBigInt(res_high, res_split) || SumTwoWithoutNew(res_high, low_part1) || LShiftBigInt(res_high, res_split) || SumTwoWithoutNew(res_high, res_low)) {
+    if (LShiftBigInt(res_high, res_split)
+        || SumTwoWithoutNew(res_high, medium)
+        || LShiftBigInt(res_high, res_split)
+        || SumTwoWithoutNew(res_high, res_low)) {
+        
         DeInit(low_part1);
         DeInit(high_part1);
         DeInit(low_part2);
         DeInit(high_part2);
         DeInit(res_high);
         DeInit(res_low);
+        DeInit(medium);
         SetSign(bigint2, sign2);
         return 1;
     }
 
     //копирование результата в первый аргумент
     if (CopyBigInt(res_high, bigint1)) {
+        printf("AZAZA\n");
         DeInit(low_part1);
         DeInit(high_part1);
         DeInit(low_part2);
         DeInit(high_part2);
         DeInit(res_high);
         DeInit(res_low);
+        DeInit(medium);
         SetSign(bigint2, sign2);
         return 1;
     }
@@ -826,6 +748,7 @@ int KaratsubaWithoutNew(BigInt* bigint1, BigInt* bigint2) {
     DeInit(high_part2);
     DeInit(res_high);
     DeInit(res_low);
+    DeInit(medium);
     SetSign(bigint1, sign1 != sign2);
     SetSign(bigint2, sign2);
     return 0;
@@ -930,16 +853,17 @@ int Af(unsigned int n, int (*mult)(BigInt* bigint1, BigInt* bigint2), BigInt* re
     Вход: натуральное число n, указатель на функцию умножения, поле для записи результата
     Возврат: 0 - успех, 1 - ошибка
     */
-    
-    if (result != NULL) {
-        DeInit(result);
-    }    
-    result = Init();
+
+    if (result->koefs != NULL) {
+        free(result->koefs);
+        result->koefs = NULL;
+    }
+    result->high_digit = 0;
 
     if (n & 1 == 0) {     //по чётным n функция равна нулю
         return 0;
     }
-
+    
     BigInt* one = Init();
     BigInt* cur_mult = Init();
     one->high_digit = 1;
@@ -958,6 +882,8 @@ int Af(unsigned int n, int (*mult)(BigInt* bigint1, BigInt* bigint2), BigInt* re
             return 1;
         }
     }
+    DeInit(one);
+    DeInit(cur_mult);
     return 0;
 }
 
@@ -971,15 +897,18 @@ int main() {
     BigInt* num0 = Init();
     BigInt* num1 = Init();
     BigInt* num2 = Init();
-    BigInt* low  = Init();
-    BigInt* high = Init();
+    BigInt* num3 = Init();
+    BigInt* num4 = Init();
+    BigInt* num5 = Init();
+    //BigInt* low = Init();
+    //BigInt* high = Init();
 
 
-    num0->koefs = (unsigned int*)realloc(num1->koefs, 2 * sizeof(unsigned int));
-    num0->koefs[0] = 1;
-    num0->koefs[1] = 4765;
-    num0->high_digit = 6543;
-    SetSign(num0, 1);
+    //num0->koefs = (unsigned int*)realloc(num1->koefs, 2 * sizeof(unsigned int));
+    //num0->koefs[0] = 1;
+    //num0->koefs[1] = 4765;
+    num0->high_digit = 29;
+    //SetSign(num0, 1);
 
     num1->koefs = (unsigned int*)realloc(num1->koefs, 4 * sizeof(unsigned int));
     num1->koefs[0] = 3;
@@ -988,7 +917,6 @@ int main() {
     num1->koefs[3] = 4565644;
     num1->high_digit = 98764456;
     //SetSign(num1, 1);
-
 
     num2->koefs = (unsigned int*)realloc(num2->koefs, 6 * sizeof(unsigned int));
     num2->koefs[0] = 5;
@@ -1000,22 +928,49 @@ int main() {
     num2->high_digit = 6;
     //SetSign(num2, 1);
 
-    PrintBigInt(num2);
+    num3->koefs = (unsigned int*)realloc(num3->koefs, 3 * sizeof(int));
+    num3->koefs[0] = 2;
+    num3->koefs[1] = 2919235584;
+    num3->koefs[2] = 2905396637;
+    num3->high_digit = 0;
 
-    SplitBigint(num2, low, high, 6);
+    num4->koefs = (unsigned int*)realloc(num4->koefs, 4 * sizeof(int));
+    num4->koefs[0] = 3;
+    num4->koefs[1] = 2919235584;
+    num4->koefs[2] = 2905396637;
+    num4->koefs[3] = 3643128391;
+    num4->high_digit = 3;
 
-    printf("NUM: ");
-    PrintBigInt(num2);
-    printf("LOW: ");
-    PrintBigInt(low);
-    printf("HIGH: ");
-    PrintBigInt(high);
+    num5->high_digit = 29;
+
+    unsigned int n = 101;
+
+    //PrintBigInt(num0);
+    //PrintBigInt(num2);
+    Af(n, KaratsubaWithoutNew, num0);
+    Af(n, MultTwoWithoutNew, num1);
+    //KaratsubaWithoutNew(num3, num0);
+    //KaratsubaWithoutNew(num4, num5);
+    PrintBigInt(num0);
+    PrintBigInt(num1);
+
+    //SplitBigint(num2, low, high, 6);
+
+    //printf("NUM: ");
+    //PrintBigInt(num2);
+    //printf("LOW: ");
+    //PrintBigInt(low);
+    //printf("HIGH: ");
+    //PrintBigInt(high);
 
     DeInit(num0);
     DeInit(num1);
     DeInit(num2);
-    DeInit(low);
-    DeInit(high);
-        
+    DeInit(num3);
+    DeInit(num4);
+    DeInit(num5);
+    //DeInit(low);
+    //DeInit(high);
+
     return 0;
 }

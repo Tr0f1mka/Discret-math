@@ -192,10 +192,11 @@ int CopyBigInt(BigInt* source, BigInt* target) {
         return 0;
     }
 
-    target->koefs = (unsigned int*)realloc(target->koefs, sizeof(unsigned int) * (source->koefs[0] + 1));
-    if (target->koefs == NULL) {
+    unsigned int* t = (unsigned int*)realloc(target->koefs, sizeof(unsigned int) * (source->koefs[0] + 1));
+    if (t == NULL) {
         return 1;
     }
+    target->koefs = t;
 
     for (unsigned int i = 0; i < source->koefs[0] + 1; i++) {
         target->koefs[i] = source->koefs[i];
@@ -366,7 +367,7 @@ int SplitBigint(BigInt* bigint, BigInt* low, BigInt* high, unsigned int shift) {
 
     unsigned int high_d = bigint->high_digit & (~SIGN_MASK),
         len = ((bigint->koefs == NULL) ? 1 : (bigint->koefs[0] + (high_d != 0)));
-
+    
     if (shift >= len) {
         if (CopyBigInt(bigint, low)) {
             SetSign(bigint, sign);
@@ -403,7 +404,9 @@ int SplitBigint(BigInt* bigint, BigInt* low, BigInt* high, unsigned int shift) {
     for (unsigned int i = shift + 1; i <= bigint->koefs[0]; i++) {
         high->koefs[i - shift] = bigint->koefs[i];
     }
-    high->koefs[len - shift] = (bigint->high_digit) & (BASE>>1);
+    if (high_d != 0) {
+        high->koefs[len - shift] = high_d;
+    }
 
     if (Normolize(low) || Normolize(high)) {
         SetSign(bigint, sign);
@@ -412,4 +415,31 @@ int SplitBigint(BigInt* bigint, BigInt* low, BigInt* high, unsigned int shift) {
 
     SetSign(bigint, sign);
     return 0;
+}
+
+
+void PrintBigInt(BigInt* big_int) {
+    /*
+    Вывод длинного целого числа в консоль
+    Вход: длинное целое число
+    Возврат: ничего
+    */
+
+    if (big_int == NULL) {
+        return;
+    }
+
+    printf("%s", (GetSign(big_int)) ? "-" : "");
+
+    if (big_int->koefs == NULL || ((big_int->high_digit) & (~SIGN_MASK)) != 0) {
+        printf("%d ", big_int->high_digit & (~SIGN_MASK));
+    }
+
+    if (big_int->koefs != NULL) {
+        for (unsigned int i = big_int->koefs[0]; i > 0; i--) {
+            printf("%u ", big_int->koefs[i]);
+        }
+    }
+
+    printf("\n");
 }

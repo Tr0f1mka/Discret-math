@@ -31,6 +31,7 @@ int CopyBigInt(BigInt* source, BigInt* target);
 int Normolize(BigInt* bigint);
 int LShiftBigInt(BigInt* bigint, unsigned int shift);
 int SplitBigint(BigInt* bigint, BigInt* low, BigInt* high, unsigned int shift);
+void PrintBigInt(BigInt* big_int);
 
 
 #endif
