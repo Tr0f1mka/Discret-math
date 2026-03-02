@@ -367,7 +367,7 @@ int SplitBigint(BigInt* bigint, BigInt* low, BigInt* high, unsigned int shift) {
 
     unsigned int high_d = bigint->high_digit & (~SIGN_MASK),
         len = ((bigint->koefs == NULL) ? 1 : (bigint->koefs[0] + (high_d != 0)));
-    
+
     if (shift >= len) {
         if (CopyBigInt(bigint, low)) {
             SetSign(bigint, sign);
@@ -442,4 +442,96 @@ void PrintBigInt(BigInt* big_int) {
     }
 
     printf("\n");
+}
+
+
+int InputBigInt(BigInt* big_int) {
+    /*
+    Ввод длинного целого числа через консоль
+    Вход: длинное целое число
+    Возврат: код работы: 0 - успех, 1 - ошибка
+    */
+
+    if (big_int == NULL) {
+        return 1;
+    }
+
+    unsigned int size;
+    printf("Input number of digits: ");
+    scanf("%u", &size);
+
+    if (size == 0) {
+        return 1;
+    }
+
+    if (size == 1) {
+        printf("Input the digit WITHOUT sign:\n");
+        scanf("%d", &big_int->high_digit);
+    }
+    else {
+        big_int->koefs = (unsigned int*)realloc(big_int->koefs, sizeof(unsigned int) * size);
+        if (big_int->koefs == NULL) {
+            return 1;
+        }
+        big_int->koefs[0] = size - 1;
+        printf("Input the digits from MOST significant to LEAST significant WITHOUT sign (e.g., for -12345 input: 1 2 3 4 5):\n");
+        scanf("%d", &big_int->high_digit);
+        for (unsigned int i = size - 1; i > 0; i--) {
+            scanf("%u", &big_int->koefs[i]);
+        }
+    }
+
+    int sign;
+    printf("Input \"0\" for \"+\" or something other than \"0\" for \"-\": ");
+    scanf("%d", &sign);
+    SetSign(big_int, sign);
+
+    return 0;
+}
+
+
+int MaskBigInt(BigInt* bigint, unsigned int n) {
+    /*
+    Вычисляет остаток от деления на 2^n
+    Вход: длинное целое число и натуральное n
+    Возврат: 0 - успех, 1 - ошибка
+    */
+
+    if (bigint == NULL) {
+        return 1;
+    }
+
+    unsigned int BITS_PER_DIGIT = sizeof(int) << 3,
+        full_digits = n / BITS_PER_DIGIT,
+        last_bits = n % BITS_PER_DIGIT,
+        high = (unsigned int)bigint->high_digit & (~SIGN_MASK),
+        len = ((bigint->koefs == NULL) ? 1 : (bigint->koefs[0] + (high != 0))),
+        last_mask = ((last_bits == 0) ? 0 : ((1U << last_bits) - 1));
+
+    if (full_digits >= len) {
+        return 0;
+    }
+
+    if (bigint->koefs == NULL) {               //короткое число, full_digit в этом кейсе будет всегда 0 (см. условие выше)
+        bigint->high_digit = high & last_mask;
+        return 0;
+    }
+    else {
+        if (bigint->koefs[0] == full_digits) {   //остаётся лишь 2 кейса: количество полных цифр равно длине массива
+            bigint->high_digit = high & last_mask;
+            return 0;
+        }
+        else {                                   //и количество полных цифр меньше длины массива (в массиве тогда хранятся полные цифры, а следующий элемент идёт в high_digit)
+            bigint->koefs[0] = full_digits;
+            bigint->high_digit = bigint->koefs[bigint->koefs[0] + 1] & last_mask;
+            unsigned int* t = (unsigned int*)realloc(bigint->koefs, sizeof(int) * (full_digits + 1));
+            if (t == NULL) {
+                return 1;
+            }
+            bigint->koefs = t;
+            return 0;
+        }
+    }
+
+    return 0;
 }

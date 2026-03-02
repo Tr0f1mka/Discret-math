@@ -1,6 +1,7 @@
 #ifndef UTILITIES_H
 #define UTILITIES_H
 
+#define _CRT_SECURE_NO_WARNINGS
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,6 +33,8 @@ int Normolize(BigInt* bigint);
 int LShiftBigInt(BigInt* bigint, unsigned int shift);
 int SplitBigint(BigInt* bigint, BigInt* low, BigInt* high, unsigned int shift);
 void PrintBigInt(BigInt* big_int);
+int InputBigInt(BigInt* big_int);
+int MaskBigInt(BigInt* bigint, unsigned int n);
 
 
 #endif

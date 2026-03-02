@@ -1,5 +1,3 @@
-#define _CRT_SECURE_NO_WARNINGS
-
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -8,8 +6,6 @@
 
 BigInt* Init();
 void DeInit(BigInt* big_int);
-int InputBigInt(BigInt* big_int);
-void PrintBigInt(BigInt* big_int);
 BigInt* SumTwo(BigInt* bigint1, BigInt* bigint2);
 BigInt* DiffTwo(BigInt* bigint1, BigInt* bigint2);
 BigInt* MultTwo(BigInt* bigint1, BigInt* bigint2);
@@ -56,51 +52,6 @@ void DeInit(BigInt* big_int) {
     }
     free(big_int);
     big_int = NULL;
-}
-
-
-int InputBigInt(BigInt* big_int) {
-    /*
-    Ввод длинного целого числа через консоль
-    Вход: длинное целое число
-    Возврат: код работы: 0 - успех, 1 - ошибка
-    */
-
-    if (big_int == NULL) {
-        return 1;
-    }
-
-    unsigned int size;
-    printf("Input number of digits: ");
-    scanf("%u", &size);
-
-    if (size == 0) {
-        return 1;
-    }
-
-    if (size == 1) {
-        printf("Input the digit WITHOUT sign:\n");
-        scanf("%d", &big_int->high_digit);
-    }
-    else {
-        big_int->koefs = (unsigned int*)realloc(big_int->koefs, sizeof(unsigned int) * size);
-        if (big_int->koefs == NULL) {
-            return 1;
-        }
-        big_int->koefs[0] = size - 1;
-        printf("Input the digits from MOST significant to LEAST significant WITHOUT sign (e.g., for -12345 input: 1 2 3 4 5):\n");
-        scanf("%d", &big_int->high_digit);
-        for (unsigned int i = size - 1; i > 0; i--) {
-            scanf("%u", &big_int->koefs[i]);
-        }
-    }
-
-    int sign;
-    printf("Input \"0\" for \"+\" or something other than \"0\" for \"-\": ");
-    scanf("%d", &sign);
-    SetSign(big_int, sign);
-
-    return 0;
 }
 
 
@@ -423,13 +374,13 @@ int MultTwoWithoutNew(BigInt* bigint1, BigInt* bigint2) {
                 else {
                     mul1 = bigint1->koefs[j];
                 }
-                if ((i+1-j) == len2 && high2 != 0) {
+                if ((i + 1 - j) == len2 && high2 != 0) {
                     mul2 = high2;
                 }
                 else {
                     mul2 = bigint2->koefs[i + 1 - j];
                 }
-                        
+
                 //mul1 = ((j == len1) ? high1 : bigint1->koefs[j]);
                 //mul2 = (((i + 1 - j) == len2) ? high2 : bigint2->koefs[i + 1 - j]);
                 unsigned int m1 = uloword(mul1) * uloword(mul2),
@@ -547,7 +498,7 @@ int KaratsubaWithoutNew(BigInt* bigint1, BigInt* bigint2) {
     if (bigint1 == NULL || bigint2 == NULL) {
         return 1;
     }
-    
+
     unsigned int high1 = bigint1->high_digit & (BASE >> 1),
         high2 = bigint2->high_digit & (BASE >> 1),
         len1 = ((bigint1->koefs == NULL) ? 1 : (bigint1->koefs[0] + (high1 != 0))),
@@ -606,7 +557,7 @@ int KaratsubaWithoutNew(BigInt* bigint1, BigInt* bigint2) {
         || Normolize(high_part1)
         || Normolize(low_part2)
         || Normolize(high_part2)) {
-        
+
         DeInit(low_part1);
         DeInit(high_part1);
         DeInit(low_part2);
@@ -616,12 +567,12 @@ int KaratsubaWithoutNew(BigInt* bigint1, BigInt* bigint2) {
     }
 
     BigInt* res_high = Init(),
-          * res_low = Init();
+        * res_low = Init();
 
     //копируем старшую и младшую половины в другие переменные
     if (CopyBigInt(high_part1, res_high)
         || CopyBigInt(low_part1, res_low)) {
-        
+
         DeInit(low_part1);
         DeInit(high_part1);
         DeInit(low_part2);
@@ -635,7 +586,7 @@ int KaratsubaWithoutNew(BigInt* bigint1, BigInt* bigint2) {
     //перемножаем старшие и младшие части
     if (KaratsubaWithoutNew(res_high, high_part2)
         || KaratsubaWithoutNew(res_low, low_part2)) {
-        
+
         DeInit(low_part1);
         DeInit(high_part1);
         DeInit(low_part2);
@@ -658,7 +609,7 @@ int KaratsubaWithoutNew(BigInt* bigint1, BigInt* bigint2) {
 
     if (medium == NULL
         || SumTwoWithoutNew(low_part2, high_part2)) {
-        
+
         DeInit(low_part1);
         DeInit(high_part1);
         DeInit(low_part2);
@@ -672,7 +623,7 @@ int KaratsubaWithoutNew(BigInt* bigint1, BigInt* bigint2) {
 
     //перемножаем суммы
     if (KaratsubaWithoutNew(medium, low_part2)) {
-        
+
         DeInit(low_part1);
         DeInit(high_part1);
         DeInit(low_part2);
@@ -699,7 +650,7 @@ int KaratsubaWithoutNew(BigInt* bigint1, BigInt* bigint2) {
     //вычисление среднего члена
     if (DiffTwoWithoutNew(medium, res_high)
         || DiffTwoWithoutNew(medium, res_low)) {
-        
+
         DeInit(low_part1);
         DeInit(high_part1);
         DeInit(low_part2);
@@ -716,7 +667,7 @@ int KaratsubaWithoutNew(BigInt* bigint1, BigInt* bigint2) {
         || SumTwoWithoutNew(res_high, medium)
         || LShiftBigInt(res_high, res_split)
         || SumTwoWithoutNew(res_high, res_low)) {
-        
+
         DeInit(low_part1);
         DeInit(high_part1);
         DeInit(low_part2);
@@ -863,7 +814,7 @@ int Af(unsigned int n, int (*mult)(BigInt* bigint1, BigInt* bigint2), BigInt* re
     if (n & 1 == 0) {     //по чётным n функция равна нулю
         return 0;
     }
-    
+
     BigInt* one = Init();
     BigInt* cur_mult = Init();
     one->high_digit = 1;
@@ -888,27 +839,64 @@ int Af(unsigned int n, int (*mult)(BigInt* bigint1, BigInt* bigint2), BigInt* re
 }
 
 
-int F(unsigned int n, int (*f)(BigInt* bigint1, BigInt* bigint2), BigInt* result) {
+int F(unsigned int n, int (*mult)(BigInt* bigint1, BigInt* bigint2), BigInt* result) {
+    /*
+    Функция поиска значение выражения 115249^4183 mod(2^n)
+    Вход: натуральное n, указатель на функцию умножения, поле для записи результата
+    Возврат: 0 - успех, 1 - ошибка
+    */
+
+    if (result == NULL) {
+        return 1;
+    }
+
+    if (result->koefs != NULL) {
+        free(result->koefs);
+        result->koefs = NULL;
+    }
+    result->high_digit = 1;
+
+    BigInt* base = Init();
+    base->high_digit = 115249;
+
+    unsigned int exp = 4183;
+
+    while (exp != 0) {
+        if (exp & 1) {
+            if (mult(result, base)) {
+                DeInit(base);
+                return 1;
+            }
+            if (MaskBigInt(result, n)) {
+                DeInit(base);
+                return 1;
+            }
+        }
+        if (mult(base, base)) {
+            DeInit(base);
+            return 1;
+        }
+        if (MaskBigInt(base, n)) {
+            DeInit(base);
+            return 1;
+        }
+        exp >>= 1;
+    }
+
     return 0;
 }
 
 
 int main() {
-    BigInt* num0 = Init();
+
+    unsigned int n = 101;
+
     BigInt* num1 = Init();
     BigInt* num2 = Init();
     BigInt* num3 = Init();
     BigInt* num4 = Init();
     BigInt* num5 = Init();
-    //BigInt* low = Init();
-    //BigInt* high = Init();
-
-
-    //num0->koefs = (unsigned int*)realloc(num1->koefs, 2 * sizeof(unsigned int));
-    //num0->koefs[0] = 1;
-    //num0->koefs[1] = 4765;
-    num0->high_digit = 29;
-    //SetSign(num0, 1);
+    BigInt* num6 = Init();
 
     num1->koefs = (unsigned int*)realloc(num1->koefs, 4 * sizeof(unsigned int));
     num1->koefs[0] = 3;
@@ -928,49 +916,38 @@ int main() {
     num2->high_digit = 6;
     //SetSign(num2, 1);
 
-    num3->koefs = (unsigned int*)realloc(num3->koefs, 3 * sizeof(int));
-    num3->koefs[0] = 2;
-    num3->koefs[1] = 2919235584;
-    num3->koefs[2] = 2905396637;
-    num3->high_digit = 0;
+    BigInt* sum = SumTwo(num1, num2);
+    BigInt* diff = DiffTwo(num1, num2);
+    BigInt* mult = MultTwo(num1, num2);
+    BigInt* karat = Karatsuba(num1, num2);
 
-    num4->koefs = (unsigned int*)realloc(num4->koefs, 4 * sizeof(int));
-    num4->koefs[0] = 3;
-    num4->koefs[1] = 2919235584;
-    num4->koefs[2] = 2905396637;
-    num4->koefs[3] = 3643128391;
-    num4->high_digit = 3;
 
-    num5->high_digit = 29;
+    Af(n, MultTwoWithoutNew, num3);
+    Af(n, MultTwoWithoutNew, num4);
+    F(n, KaratsubaWithoutNew, num5);
+    F(n, MultTwoWithoutNew, num6);
+    
 
-    unsigned int n = 101;
+    PrintBigInt(sum);      //6 634 144529890 881108878 423702224 129332
+    PrintBigInt(diff);     //-6 633 4241968274 871977589 3871533724 119802
+    PrintBigInt(mult);     //592586750 2515569219 1541370835 1417945931 2845549147 700905846 267932998 3844149492 593561755
+    PrintBigInt(karat);    //592586750 2515569219 1541370835 1417945931 2845549147 700905846 267932998 3844149492 593561755
+    PrintBigInt(num3);     //703019 1293101599 3661011161 472310225 3106540053 2626154124 3293359988 2062927204 23496238 1532496876 1894677346 3880089912 483927649 2016880706 0 0 0
+    PrintBigInt(num4);     //703019 1293101599 3661011161 472310225 3106540053 2626154124 3293359988 2062927204 23496238 1532496876 1894677346 3880089912 483927649 2016880706 0 0 0
+    PrintBigInt(num5);     //6 4291374985 388989611 2921648977
+    PrintBigInt(num6);     //6 4291374985 388989611 2921648977
 
-    //PrintBigInt(num0);
-    //PrintBigInt(num2);
-    Af(n, KaratsubaWithoutNew, num0);
-    Af(n, MultTwoWithoutNew, num1);
-    //KaratsubaWithoutNew(num3, num0);
-    //KaratsubaWithoutNew(num4, num5);
-    PrintBigInt(num0);
-    PrintBigInt(num1);
 
-    //SplitBigint(num2, low, high, 6);
-
-    //printf("NUM: ");
-    //PrintBigInt(num2);
-    //printf("LOW: ");
-    //PrintBigInt(low);
-    //printf("HIGH: ");
-    //PrintBigInt(high);
-
-    DeInit(num0);
     DeInit(num1);
     DeInit(num2);
     DeInit(num3);
     DeInit(num4);
     DeInit(num5);
-    //DeInit(low);
-    //DeInit(high);
+    DeInit(num6);
+    DeInit(sum);
+    DeInit(diff);
+    DeInit(mult);
+    DeInit(karat);   
 
     return 0;
 }
