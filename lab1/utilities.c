@@ -535,3 +535,57 @@ int MaskBigInt(BigInt* bigint, unsigned int n) {
 
     return 0;
 }
+
+
+int SumTwoUINT(unsigned int a, unsigned int b, unsigned int* result, unsigned int* over) {
+    /*
+    Складывает 2 числа в пределах двух интов
+    Вход: 2 целых беззнаковых числа - слагаемые и 2 указателя на беззнаковые целые числа - поля для ответа
+    Возврат: 0 - успех, 1 - ошибка
+    */
+
+    if (result == NULL || over == NULL) {
+        return 1;
+    }
+
+    *result = uloword(a) + uloword(b);
+    *over = uhiword(a) + uhiword(b) + uhiword(*result);
+    *result = uloword(*result) + (uloword(*over) << (sizeof(int) << 2));
+    *over >>= (sizeof(int) << 2);
+
+    return 0;
+}
+
+
+
+int MultTwoUINT(unsigned int a, unsigned int b, unsigned int* result, unsigned int* over) {
+    /*
+    Умножает 2 числа в пределах двух интов
+    Вход: 2 целых беззнаковых числа - множители и 2 указателя на беззнаковые целые числа - поля для ответа
+    Возврат: 0 - успех, 1 - ошибка
+    */
+
+    if (result == NULL || over == NULL) {
+        return 1;
+    }
+
+    unsigned int m1 = uloword(a)*uloword(b),
+                 m2 = uhiword(a)*uloword(b),
+                 m3 = uloword(a)*uhiword(b),
+                 m4 = uhiword(a)*uhiword(b);
+    
+    unsigned int mid, over_mid;
+    if (SumTwoUINT(m2, m3, &mid, &over_mid)) {
+        return 1;
+    }
+
+    unsigned over_low;
+
+    if (SumTwoUINT(m1, uloword(mid)<<(sizeof(int)<<2), result, &over_low)) {
+        return 1;
+    }
+
+    *over = m4 + over_low + (over_mid << (sizeof(int) << 2)) + uhiword(mid);
+
+    return 0;
+}
